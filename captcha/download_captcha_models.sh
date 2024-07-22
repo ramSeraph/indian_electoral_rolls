@@ -16,4 +16,6 @@ do
    wget https://storage.googleapis.com/lgd_captcha_tesseract_models/$f -O $f
 done
 
+cat old/myconfig | sed 's/^tessedit_char_whitelist .*/tessedit_char_whitelist 0123456789abcdefghijklmnopqrstuvwxyz/' > old/myconfig.new
+mv old/myconfig.new old/myconfig
 
