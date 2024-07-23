@@ -5,6 +5,8 @@ from pathlib import Path
 from pprint import pprint
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 from imgcat import imgcat
 from PIL import Image
 
@@ -217,7 +219,18 @@ def collect_captchas(session, count):
 if __name__ == '__main__':
     data_dir.mkdir(exist_ok=True, parents=True)
 
+    retries = 5
+    retry_delay_base_secs = 10
     session = requests.session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=retry_delay_base_secs,
+        status_forcelist=set([500]),
+    )
+    session.mount('http://', HTTPAdapter(max_retries=retry))
+    session.mount('https://', HTTPAdapter(max_retries=retry))
 
     resp = session.get(base_url)
     if not resp.ok:
