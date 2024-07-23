@@ -146,9 +146,28 @@ def get_captcha(session):
     if data['status'] != 'Success':
         raise Exception(f'Unable to get captcha at {captcha_url}, message: {data["message"]}')
 
+    if data['captcha'] is None:
+        return None, None
+
     img_bytes = base64.b64decode(data['captcha'])
     img = Image.open(io.BytesIO(img_bytes))
     return data['id'], img
+
+def make_download_call(session, postdata):
+    resp = session.post(roll_url, json=postdata)
+    if not resp.ok:
+        if resp.status_code == 400:
+            data = resp.json()
+            if data['message'] == 'Invalid Catpcha':
+                return None
+        print(resp.text)
+        raise Exception('Unable to get roll for part {partno} at {roll_url}')
+
+    data = resp.json()
+    if data['status'] != 'Success':
+        raise Exception('Unable to get roll for part {partno} at {roll_url}, message: {data["message"]}')
+
+    return data
 
 
 def download_part(session, lang, part):
@@ -167,6 +186,9 @@ def download_part(session, lang, part):
 
     while True:
         captcha_id, captcha_img = get_captcha(session)
+        if captcha_img is None:
+            print('\t\t\tUnable to get captcha image.. retrying')
+            continue
 
         captcha_val = solve_captcha(captcha_img)
 
@@ -180,20 +202,10 @@ def download_part(session, lang, part):
             'stateCd'    : scode,
         }
 
-        resp = session.post(roll_url, json=postdata)
-        if not resp.ok:
-            if resp.status_code == 400:
-                data = resp.json()
-                if data['message'] == 'Invalid Catpcha':
-                    print('\t\t\tCaptcha failed.. retrying')
-                    continue
-            print(resp.text)
-            raise Exception('Unable to get roll for part {partno} at {roll_url}')
-
-        data = resp.json()
-        if data['status'] != 'Success':
-            raise Exception('Unable to get roll for part {partno} at {roll_url}, message: {data["message"]}')
-
+        data = make_download_call(session, postdata)
+        if data is None:
+            print('\t\t\tFailed at solving captcha.. retrying')
+            continue
 
         if data['file'] is None:
             print(f'\t\t\tvoter roll not available')
