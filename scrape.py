@@ -1,5 +1,6 @@
 import io
 import json
+import time
 import base64
 from pathlib import Path
 from pprint import pprint
@@ -26,6 +27,16 @@ district_url_tpl   = api_base_url + '/common/districts/{}'
 
 data_dir = Path('data')
 captcha_dir = Path('captcha/data')
+
+
+max_attempts = 5
+initial_delay = 100
+
+class RetriableException(Exception):
+    pass
+
+class DelayedRetriableException(Exception):
+    pass
 
 def get_state_list(session):
     state_list_file = data_dir / 'state_list.json'
@@ -147,7 +158,7 @@ def get_captcha(session):
         raise Exception(f'Unable to get captcha at {captcha_url}, message: {data["message"]}')
 
     if data['captcha'] is None:
-        return None, None
+        raise DelayedRetriableException('Got empty captcha')
 
     img_bytes = base64.b64decode(data['captcha'])
     img = Image.open(io.BytesIO(img_bytes))
@@ -159,15 +170,19 @@ def make_download_call(session, postdata):
         if resp.status_code == 400:
             data = resp.json()
             if data['message'] == 'Invalid Catpcha':
-                return None
-        print(resp.text)
-        raise Exception('Unable to get roll for part {partno} at {roll_url}')
+                raise RetriableException('Failed to solve captcha')
+        if resp.status_code == 500:
+            data = resp.json()
+            raise DelayedRetriableException(data['message'])
+        print('\t\t\tWARNING: Failed request - ', resp.text)
+        raise Exception(f'Unable to get roll for part {postdata} at {roll_url}')
 
     data = resp.json()
     if data['status'] != 'Success':
-        raise Exception('Unable to get roll for part {partno} at {roll_url}, message: {data["message"]}')
+        raise Exception(f'Unable to get roll for part {postdata} at {roll_url}, message: {data["message"]}')
 
     return data
+
 
 
 def download_part(session, lang, part):
@@ -184,31 +199,39 @@ def download_part(session, lang, part):
 
     pdf_file.parent.mkdir(exist_ok=True, parents=True)
 
+    try_count = 1
+    curr_delay = initial_delay
     while True:
-        captcha_id, captcha_img = get_captcha(session)
-        if captcha_img is None:
-            print('\t\t\tUnable to get captcha image.. retrying')
+        try:
+            captcha_id, captcha_img = get_captcha(session)
+            captcha_val = solve_captcha(captcha_img)
+
+            postdata = {
+                'acNumber'   : acno,
+                'captcha'    : captcha_val,
+                'captchaId'  : captcha_id,
+                'districtCd' : dcode,
+                'langCd'     : lang,
+                'partNumber' : partno,
+                'stateCd'    : scode,
+            }
+
+            data = make_download_call(session, postdata)
+        except RetriableException as ex:
+            print(f'\t\t\tWARNING: {ex}')
             continue
-
-        captcha_val = solve_captcha(captcha_img)
-
-        postdata = {
-            'acNumber'   : acno,
-            'captcha'    : captcha_val,
-            'captchaId'  : captcha_id,
-            'districtCd' : dcode,
-            'langCd'     : lang,
-            'partNumber' : partno,
-            'stateCd'    : scode,
-        }
-
-        data = make_download_call(session, postdata)
-        if data is None:
-            print('\t\t\tFailed at solving captcha.. retrying')
+        except DelayedRetriableException as ex:
+            print(f'\t\t\tWARNING: {ex}..')
+            if try_count > max_attempts:
+                raise Exception('Unable to retrieve file')
+            print(f'\t\t\tWARNING: sleeping for {curr_delay} before attempting again')
+            time.sleep(curr_delay)
+            try_count += 1
+            curr_delay *= 2
             continue
 
         if data['file'] is None:
-            print(f'\t\t\tvoter roll not available')
+            print(f'\t\t\tWARNING: voter roll not available')
             pdf_file.write_text('')
             return False
         print(f'\t\t\twriting file: {pdf_file}')
@@ -231,14 +254,12 @@ def collect_captchas(session, count):
 if __name__ == '__main__':
     data_dir.mkdir(exist_ok=True, parents=True)
 
-    retries = 5
-    retry_delay_base_secs = 100
     session = requests.session()
     retry = Retry(
-        total=retries,
-        read=retries,
-        connect=retries,
-        backoff_factor=retry_delay_base_secs,
+        total=max_attempts,
+        read=max_attempts,
+        connect=max_attempts,
+        backoff_factor=initial_delay,
         status_forcelist=set([500]),
     )
     session.mount('http://', HTTPAdapter(max_retries=retry))
