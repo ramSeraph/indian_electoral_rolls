@@ -232,7 +232,7 @@ if __name__ == '__main__':
     data_dir.mkdir(exist_ok=True, parents=True)
 
     retries = 5
-    retry_delay_base_secs = 10
+    retry_delay_base_secs = 100
     session = requests.session()
     retry = Retry(
         total=retries,
