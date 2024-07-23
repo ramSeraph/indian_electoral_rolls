@@ -174,7 +174,8 @@ def make_download_call(session, postdata):
     if not resp.ok:
         if resp.status_code == 400:
             data = resp.json()
-            if data['message'] == 'Invalid Catpcha':
+            msg = data['message']
+            if msg == 'Invalid Catpcha':
                 raise RetriableException('Failed to solve captcha')
         if resp.status_code == 500:
             data = resp.json()
@@ -210,6 +211,8 @@ def download_part(session, lang, part):
         try:
             captcha_id, captcha_img = get_captcha(session)
             captcha_val = solve_captcha(captcha_img)
+            if captcha_val == '':
+                raise RetriableException('Could not solve captcha')
 
             postdata = {
                 'acNumber'   : acno,
