@@ -27,6 +27,7 @@ district_url_tpl   = api_base_url + '/common/districts/{}'
 
 
 data_dir = Path('data')
+raw_dir = data_dir / 'raw'
 captcha_dir = Path('captcha/data')
 
 
@@ -40,7 +41,7 @@ class DelayedRetriableException(Exception):
     pass
 
 def get_state_list(session):
-    state_list_file = data_dir / 'state_list.json'
+    state_list_file = raw_dir / 'state_list.json'
     if state_list_file.exists():
         return json.loads(state_list_file.read_text())
 
@@ -55,7 +56,7 @@ def get_state_list(session):
     
 
 def get_district_list(session, scode):
-    state_dir = data_dir / f'{scode}'
+    state_dir = raw_dir / f'{scode}'
     state_dir.mkdir(exist_ok=True, parents=True)
 
     d_file = state_dir / 'district_list.json'
@@ -75,7 +76,7 @@ def get_district_list(session, scode):
 
 
 def get_constituency_list(session, scode):
-    state_dir = data_dir / f'{scode}'
+    state_dir = raw_dir / f'{scode}'
     state_dir.mkdir(exist_ok=True, parents=True)
 
     c_file = state_dir / 'constituency_list.json'
@@ -99,7 +100,7 @@ def get_constituency_langs(session, c_info):
     dcode = c_info['districtCd']
     acno  = c_info['asmblyNo']
 
-    c_dir = data_dir / f'{scode}' / f'{acno}'
+    c_dir = raw_dir / f'{scode}' / f'{acno}'
     c_dir.mkdir(exist_ok=True, parents=True)
 
     lang_file = c_dir / 'langs.json'
@@ -127,7 +128,7 @@ def get_constituency_parts(session, c_info):
     dcode = c_info['districtCd']
     acno  = c_info['asmblyNo']
 
-    c_dir = data_dir / f'{scode}' / f'{acno}'
+    c_dir = raw_dir / f'{scode}' / f'{acno}'
     c_dir.mkdir(exist_ok=True, parents=True)
 
     parts_file = c_dir / 'parts.json'
@@ -198,7 +199,7 @@ def download_part(session, lang, part):
     scode  = part['stateCd']
     dcode  = part['districtCd']
 
-    pdf_file = data_dir / f'{scode}' / f'{acno}' / f'{lang}' / f'{partno}.pdf'
+    pdf_file = raw_dir / f'{scode}' / f'{acno}' / f'{lang}' / f'{partno}.pdf'
     if pdf_file.exists():
         sz = pdf_file.stat().st_size
         return sz != 0
@@ -260,7 +261,7 @@ def collect_captchas(session, count):
 
 
 if __name__ == '__main__':
-    data_dir.mkdir(exist_ok=True, parents=True)
+    raw_dir.mkdir(exist_ok=True, parents=True)
 
     session = requests.session()
     retry = Retry(
