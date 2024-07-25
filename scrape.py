@@ -168,6 +168,7 @@ def get_captcha(session):
         if resp.status_code == 500:
             data = resp.json()
             raise DelayedRetriableException(data['message'])
+        print(resp.text, resp.status_code)
         raise Exception(f'Unable to get captcha at {captcha_url}')
 
     data = resp.json()
