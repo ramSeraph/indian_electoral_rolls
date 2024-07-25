@@ -67,6 +67,9 @@ def get_district_list(session, scode):
 
     resp = session.get(dist_list_url)
     if not resp.ok:
+        if resp.status_code == 500:
+            data = resp.json()
+            raise DelayedRetriableException(data['message'])
         raise Exception(f'Unable to get district list for {scode} from {dist_list_url}')
 
     resp_text = resp.text
@@ -87,6 +90,9 @@ def get_constituency_list(session, scode):
 
     resp = session.get(const_list_url)
     if not resp.ok:
+        if resp.status_code == 500:
+            data = resp.json()
+            raise DelayedRetriableException(data['message'])
         raise Exception(f'Unable to get constituency list for {scode} from {const_list_url}')
 
     resp_text = resp.text
@@ -110,6 +116,9 @@ def get_constituency_langs(session, c_info):
     postdata = { 'acNumber': acno, 'districtCd': dcode, 'stateCd': scode }
     resp = session.post(lang_url, json=postdata)
     if not resp.ok:
+        if resp.status_code == 500:
+            data = resp.json()
+            raise DelayedRetriableException(data['message'])
         raise Exception(f'Unable to get language list for constituency {acno} of {scode} from {lang_url}')
     
     data = json.loads(resp.text)
@@ -138,6 +147,9 @@ def get_constituency_parts(session, c_info):
     postdata = { 'acNumber': acno, 'districtCd': dcode, 'stateCd': scode }
     resp = session.post(part_list_url, json=postdata)
     if not resp.ok:
+        if resp.status_code == 500:
+            data = resp.json()
+            raise DelayedRetriableException(data['message'])
         raise Exception(f'Unable to get parts list for constituency {acno} of {scode} from {part_list_url}')
     
     data = json.loads(resp.text)
@@ -153,6 +165,9 @@ def get_constituency_parts(session, c_info):
 def get_captcha(session):
     resp = session.get(captcha_url)
     if not resp.ok:
+        if resp.status_code == 500:
+            data = resp.json()
+            raise DelayedRetriableException(data['message'])
         raise Exception(f'Unable to get captcha at {captcha_url}')
 
     data = resp.json()
@@ -206,8 +221,6 @@ def download_part(session, lang, part):
 
     pdf_file.parent.mkdir(exist_ok=True, parents=True)
 
-    try_count = 1
-    curr_delay = initial_delay
     while True:
         try:
             captcha_id, captcha_img = get_captcha(session)
@@ -228,15 +241,6 @@ def download_part(session, lang, part):
             data = make_download_call(session, postdata)
         except RetriableException as ex:
             print(f'\t\t\tWARNING: {ex}')
-            continue
-        except DelayedRetriableException as ex:
-            print(f'\t\t\tWARNING: {ex}..')
-            if try_count > max_attempts:
-                raise Exception('Unable to retrieve file')
-            print(f'\t\t\tWARNING: sleeping for {curr_delay} before attempting again')
-            time.sleep(curr_delay)
-            try_count += 1
-            curr_delay *= 2
             continue
 
         if data['file'] is None:
@@ -259,10 +263,7 @@ def collect_captchas(session, count):
         captcha_img.save(cfile)
     
 
-
-if __name__ == '__main__':
-    raw_dir.mkdir(exist_ok=True, parents=True)
-
+def download():
     session = requests.session()
     retry = Retry(
         total=max_attempts,
@@ -298,5 +299,26 @@ if __name__ == '__main__':
                     print(f'\t\thandling lang: {lang}, part: {part_name}')
                     success = download_part(session, lang, part)
                     
+
+
+
+if __name__ == '__main__':
+    raw_dir.mkdir(exist_ok=True, parents=True)
+
+    try_count = 1
+    curr_delay = initial_delay
+    while True:
+        try:
+            download()
+            exit(0)
+        except DelayedRetriableException as ex:
+            print(f'WARNING: {ex}..')
+            if try_count > max_attempts:
+                raise Exception('Unable to retrieve data')
+            print(f'WARNING: sleeping for {curr_delay} before attempting again')
+            time.sleep(curr_delay)
+            try_count += 1
+            curr_delay *= 2
+            continue
 
 
