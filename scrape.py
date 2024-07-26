@@ -34,6 +34,9 @@ captcha_dir = Path('captcha/data')
 max_attempts = 5
 initial_delay = 100
 
+try_count = 1
+curr_delay = initial_delay
+
 class RetriableException(Exception):
     pass
 
@@ -123,7 +126,7 @@ def get_constituency_langs(session, c_info):
     
     data = json.loads(resp.text)
     if data['status'] != 'Success':
-        raise Exception(f'Unable to get language list for constituency {acno} of {scode} from {lang_url}, message: {data["message"]}')
+        raise DelayedRetriableException(f'Unable to get language list for constituency {acno} of {scode} from {lang_url}, message: {data["message"]}, status: {data["status"]}')
 
     langs = data['payload']
 
@@ -154,7 +157,7 @@ def get_constituency_parts(session, c_info):
     
     data = json.loads(resp.text)
     if data['status'] != 'Success':
-        raise Exception(f'Unable to get parts list for constituency {acno} of {scode} from {part_list_url}, message: {data["message"]}')
+        raise DelayedRetriableException(f'Unable to get parts list for constituency {acno} of {scode} from {part_list_url}, message: {data["message"]}, status: {data["status"]}')
 
     parts = data['payload']
 
@@ -173,7 +176,7 @@ def get_captcha(session):
 
     data = resp.json()
     if data['status'] != 'Success':
-        raise Exception(f'Unable to get captcha at {captcha_url}, message: {data["message"]}')
+        raise DelayedRetriableException(f'Unable to get captcha at {captcha_url}, message: {data["message"]}')
 
     if data['captcha'] is None:
         raise DelayedRetriableException('Got empty captcha')
@@ -202,7 +205,7 @@ def make_download_call(session, postdata):
 
     data = resp.json()
     if data['status'] != 'Success':
-        raise Exception(f'Unable to get roll for part {postdata} at {roll_url}, message: {data["message"]}')
+        raise DelayedRetriableException(f'Unable to get roll for part {postdata} at {roll_url}, message: {data["message"]}, status: {data["status"]}')
 
     return data
 
@@ -309,10 +312,10 @@ def download():
                     
 
 
-try_count = 1
-curr_delay = initial_delay
 
 def reset_delay():
+    global try_count
+    global curr_delay
     try_count = 1
     curr_delay = initial_delay
 
