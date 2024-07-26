@@ -279,8 +279,10 @@ def download():
     resp = session.get(base_url)
     if not resp.ok:
         raise Exception(f'Unable to get main page at {base_url}')
+    reset_delay()
 
     state_list = get_state_list(session)
+    reset_delay()
 
     for state_info in state_list:
         scode = state_info['stateCd']
@@ -288,26 +290,36 @@ def download():
         print(f'handling state: {sname}')
   
         district_list = get_district_list(session, scode)
+        reset_delay()
         constituency_list = get_constituency_list(session, scode)
+        reset_delay()
         for constituency_info in constituency_list:
             acname = constituency_info['asmblyName']
             print(f'\thandling constituency: {acname}')
             langs = get_constituency_langs(session, constituency_info)
+            reset_delay()
             parts = get_constituency_parts(session, constituency_info)
+            reset_delay()
             for lang in langs:
                 for part in parts:
                     part_name = part['partName']
                     print(f'\t\thandling lang: {lang}, part: {part_name}')
                     success = download_part(session, lang, part)
+                    reset_delay()
                     
 
+
+try_count = 1
+curr_delay = initial_delay
+
+def reset_delay():
+    try_count = 1
+    curr_delay = initial_delay
 
 
 if __name__ == '__main__':
     raw_dir.mkdir(exist_ok=True, parents=True)
 
-    try_count = 1
-    curr_delay = initial_delay
     while True:
         try:
             download()
