@@ -124,7 +124,11 @@ def get_constituency_langs(session, c_info):
         return json.loads(lang_file.read_text())
 
     postdata = { 'acNumber': acno, 'districtCd': dcode, 'stateCd': scode }
-    resp = session.post(lang_url, json=postdata)
+    try:
+        resp = session.post(lang_url, json=postdata)
+    except RequestException as ex:
+        raise DelayedRetriableException(str(ex))
+
     if not resp.ok:
         raise_delayed_exception_if_needed(resp)
         raise Exception(f'Unable to get language list for constituency {acno} of {scode} from {lang_url}')
@@ -153,7 +157,10 @@ def get_constituency_parts(session, c_info):
         return json.loads(parts_file.read_text())
 
     postdata = { 'acNumber': acno, 'districtCd': dcode, 'stateCd': scode }
-    resp = session.post(part_list_url, json=postdata)
+    try:
+        resp = session.post(part_list_url, json=postdata)
+    except RequestException as ex:
+        raise DelayedRetriableException(str(ex))
     if not resp.ok:
         raise_delayed_exception_if_needed(resp)
         raise Exception(f'Unable to get parts list for constituency {acno} of {scode} from {part_list_url}')
@@ -169,7 +176,11 @@ def get_constituency_parts(session, c_info):
     return parts
 
 def get_captcha(session):
-    resp = session.get(captcha_url)
+    try:
+        resp = session.get(captcha_url)
+    except RequestException as ex:
+        raise DelayedRetriableException(str(ex))
+
     if not resp.ok:
         raise_delayed_exception_if_needed(resp)
         print(resp.text, resp.status_code)
@@ -309,8 +320,6 @@ def download():
                     success = download_part(session, lang, part)
                     reset_delay()
                     
-
-
 
 def reset_delay():
     global try_count
