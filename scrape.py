@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pprint
 
 import requests
-from requests.exceptions import ChunkedEncodingError, JSONDecodeError
+from requests.exceptions import RequestException
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from imgcat import imgcat
@@ -189,7 +189,7 @@ def get_captcha(session):
 def make_download_call(session, postdata):
     try:
         resp = session.post(roll_url, json=postdata)
-    except ChunkedEncodingError as ex:
+    except RequestException as ex:
         raise DelayedRetriableException(str(ex))
 
     if not resp.ok:
