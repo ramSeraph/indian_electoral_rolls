@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pprint
 
 import requests
-from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ChunkedEncodingError, JSONDecodeError
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from imgcat import imgcat
@@ -43,6 +43,17 @@ class RetriableException(Exception):
 class DelayedRetriableException(Exception):
     pass
 
+def raise_delayed_exception_if_needed(resp):
+    if resp.status_code != 500:
+        return
+    try:
+        data = resp.json()
+        msg = f'message: {data.get("message", None)}'
+    except JSONDecodeError:
+        msg = resp.text
+    raise DelayedRetriableException(msg)
+
+
 def get_state_list(session):
     state_list_file = raw_dir / 'state_list.json'
     if state_list_file.exists():
@@ -70,9 +81,7 @@ def get_district_list(session, scode):
 
     resp = session.get(dist_list_url)
     if not resp.ok:
-        if resp.status_code == 500:
-            data = resp.json()
-            raise DelayedRetriableException(data['message'])
+        raise_delayed_exception_if_needed(resp)
         raise Exception(f'Unable to get district list for {scode} from {dist_list_url}')
 
     resp_text = resp.text
@@ -93,9 +102,7 @@ def get_constituency_list(session, scode):
 
     resp = session.get(const_list_url)
     if not resp.ok:
-        if resp.status_code == 500:
-            data = resp.json()
-            raise DelayedRetriableException(data['message'])
+        raise_delayed_exception_if_needed(resp)
         raise Exception(f'Unable to get constituency list for {scode} from {const_list_url}')
 
     resp_text = resp.text
@@ -119,9 +126,7 @@ def get_constituency_langs(session, c_info):
     postdata = { 'acNumber': acno, 'districtCd': dcode, 'stateCd': scode }
     resp = session.post(lang_url, json=postdata)
     if not resp.ok:
-        if resp.status_code == 500:
-            data = resp.json()
-            raise DelayedRetriableException(data['message'])
+        raise_delayed_exception_if_needed(resp)
         raise Exception(f'Unable to get language list for constituency {acno} of {scode} from {lang_url}')
     
     data = json.loads(resp.text)
@@ -150,9 +155,7 @@ def get_constituency_parts(session, c_info):
     postdata = { 'acNumber': acno, 'districtCd': dcode, 'stateCd': scode }
     resp = session.post(part_list_url, json=postdata)
     if not resp.ok:
-        if resp.status_code == 500:
-            data = resp.json()
-            raise DelayedRetriableException(data['message'])
+        raise_delayed_exception_if_needed(resp)
         raise Exception(f'Unable to get parts list for constituency {acno} of {scode} from {part_list_url}')
     
     data = json.loads(resp.text)
@@ -168,9 +171,7 @@ def get_constituency_parts(session, c_info):
 def get_captcha(session):
     resp = session.get(captcha_url)
     if not resp.ok:
-        if resp.status_code == 500:
-            data = resp.json()
-            raise DelayedRetriableException(data['message'])
+        raise_delayed_exception_if_needed(resp)
         print(resp.text, resp.status_code)
         raise Exception(f'Unable to get captcha at {captcha_url}')
 
@@ -197,9 +198,7 @@ def make_download_call(session, postdata):
             msg = data['message']
             if msg == 'Invalid Catpcha':
                 raise RetriableException('Failed to solve captcha')
-        if resp.status_code == 500:
-            data = resp.json()
-            raise DelayedRetriableException(data['message'])
+        raise_delayed_exception_if_needed(resp)
         print('\t\t\tWARNING: Failed request - ', resp.text)
         raise Exception(f'Unable to get roll for part {postdata} at {roll_url}')
 
