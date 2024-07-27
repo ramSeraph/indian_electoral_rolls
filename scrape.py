@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pprint
 
 import requests
-from requests.exceptions import RequestException
+from requests.exceptions import RequestException, JSONDecodeError
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from imgcat import imgcat
