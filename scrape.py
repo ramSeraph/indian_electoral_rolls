@@ -43,8 +43,8 @@ class RetriableException(Exception):
 class DelayedRetriableException(Exception):
     pass
 
-def raise_delayed_exception_if_needed(resp):
-    if resp.status_code != 500:
+def raise_delayed_exception_if_needed(resp, status_codes=[500]):
+    if resp.status_code not in status_codes:
         return
     try:
         data = resp.json()
@@ -182,7 +182,7 @@ def get_captcha(session):
         raise DelayedRetriableException(str(ex))
 
     if not resp.ok:
-        raise_delayed_exception_if_needed(resp)
+        raise_delayed_exception_if_needed(resp, status_codes=[400,500])
         print(resp.text, resp.status_code)
         raise Exception(f'Unable to get captcha at {captcha_url}')
 
