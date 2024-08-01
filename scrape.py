@@ -230,8 +230,7 @@ def download_part(session, lang, part):
 
     pdf_file = raw_dir / f'{scode}' / f'{acno}' / f'{lang}' / f'{partno}.pdf'
     if pdf_file.exists():
-        sz = pdf_file.stat().st_size
-        return sz != 0
+        return pdf_file
 
     pdf_file.parent.mkdir(exist_ok=True, parents=True)
 
@@ -260,13 +259,14 @@ def download_part(session, lang, part):
         if data['file'] is None:
             print(f'\t\t\tWARNING: voter roll not available')
             pdf_file.write_text('')
-            return False
+            return pdf_file
         print(f'\t\t\twriting file: {pdf_file}')
         content = base64.b64decode(data['file'])
 
         pdf_file.write_bytes(content)
-        return True
+        return pdf_file
 
+   
 
 def collect_captchas(session, count):
 
@@ -317,7 +317,7 @@ def download():
                 for part in parts:
                     part_name = part['partName']
                     print(f'\t\thandling lang: {lang}, part: {part_name}')
-                    success = download_part(session, lang, part)
+                    pdf_file = download_part(session, lang, part)
                     reset_delay()
                     
 
