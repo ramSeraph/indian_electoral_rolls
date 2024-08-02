@@ -14,6 +14,8 @@ from PIL import Image
 
 from captcha.solve import solve_captcha
 
+#from utils import convert_to_pages
+
 base_url     = 'https://voters.eci.gov.in/download-eroll'
 api_base_url = 'https://gateway-voters.eci.gov.in/api/v1'
 
@@ -318,6 +320,7 @@ def download():
                     part_name = part['partName']
                     print(f'\t\thandling lang: {lang}, part: {part_name}')
                     pdf_file = download_part(session, lang, part)
+                    #convert_to_pages(pdf_file)
                     reset_delay()
                     
 
