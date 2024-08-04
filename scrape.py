@@ -278,6 +278,14 @@ def collect_captchas(session, count):
         cfile = captcha_dir / f'{captcha_id}.png'
         captcha_img.save(cfile)
     
+def get_priority_map():
+    txt = Path('priority_list.txt').read_text()
+    codes = txt.split('\n')
+    codes = [ c.strip() for c in codes if c.strip() != '' ]
+    priority_map = {}
+    for i,code in enumerate(codes):
+        priority_map[code] = i
+    return priority_map
 
 def download():
     session = requests.session()
@@ -298,6 +306,9 @@ def download():
 
     state_list = get_state_list(session)
     reset_delay()
+
+    priority_map = get_priority_map()
+    state_list.sort(key=lambda x: priority_map[x['stateCd']])
 
     for state_info in state_list:
         scode = state_info['stateCd']
