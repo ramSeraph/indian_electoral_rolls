@@ -1,6 +1,16 @@
 import io
+import sys
+import threading
+import json
+import tarfile
 import subprocess
+import shutil
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
+
+import boto3
+from boto3.s3.transfer import TransferConfig
+
 from pypdf import PdfReader
 from PIL import Image
 
@@ -61,4 +71,69 @@ def convert_to_pages(pdf_file):
     pages_dir = get_alt_dir(pdf_file, 'pages')
     extract_images_from_pdf(pdf_file, pages_dir)
     pdf_file.write_text('DONE')
+
+
+class ProgressPercentage(object):
+    def __init__(self, filename):
+        self._filename = filename
+        self._size = float(Path(filename).stat().st_size)
+        self._seen_so_far = 0
+        self._lock = threading.Lock()
+
+    def __call__(self, bytes_amount):
+        with self._lock:
+            self._seen_so_far += bytes_amount
+            percentage = (self._seen_so_far / self._size) * 100
+            sys.stdout.write(
+                "\r%s  %s / %s  (%.2f%%)" % (
+                    self._filename, self._seen_so_far, self._size,
+                    percentage))
+            sys.stdout.flush()
+
+
+boto_client = None
+def get_boto_client():
+    global boto_client
+    if boto_client is None:
+        config = json.loads(Path('r2_credentials.json').read_text())
+        boto_client = boto3.client('s3',
+                                   endpoint_url = f'https://{config["accountid"]}.r2.cloudflarestorage.com',
+                                   aws_access_key_id = config['access_key_id'],
+                                   aws_secret_access_key = config['access_key_secret'])
+    return boto_client
+
+
+def create_archive(cinfo, lang):
+    acno  = cinfo['asmblyNo']
+    scode = cinfo['stateCd']
+
+    ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
+    l_pages_dir  = ac_pages_dir / f'{lang}' 
+    if not l_pages_dir.exists():
+        return
+
+    archive_file = ac_pages_dir / f'{lang}.tar'
+
+    if not archive_file.exists():
+        print(f'creating {archive_file}')
+        run_external(f'tar -cvf {archive_file} {l_pages_dir}')
+        shutil.rmtree(l_pages_dir)
+
+
+def upload_archive_to_r2(cinfo, lang):
  
+    ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
+    archive_file = ac_pages_dir / f'{lang}.tar'
+
+    if not archive_file.exists():
+        return
+       
+    s3 = get_boto_client()
+    config = TransferConfig(multipart_threshold=1024*25, max_concurrency=10,
+                            multipart_chunksize=1024*25, use_threads=True)
+
+    s3.upload_file(archive_file, 'indian-electoral-rolls', f'{scode}/{acno}/{lang}.tar',
+                   Config=config, Callback=ProgressPercentage(archive_file))
+
+    archive_file.unlink()
+
