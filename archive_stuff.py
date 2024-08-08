@@ -11,7 +11,7 @@ for ldir in raw_dir.glob('*/*/*/'):
     
     parts_file = ldir.parent / 'parts.json'
     parts = json.loads(parts_file.read_text())
-    part_files = [ ldir / f'{p["partNumber"].pdf}' for p in parts ]
+    part_files = [ ldir / f'{p["partNumber"]}.pdf' for p in parts ]
     all_parts_done = all([ p.exists() and p.stat().st_size <= 4 for p in part_files ])
     if not all_parts_done:
         continue
