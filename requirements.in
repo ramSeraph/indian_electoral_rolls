@@ -5,3 +5,4 @@ pillow
 pytesseract
 requests
 pypdf
+boto3

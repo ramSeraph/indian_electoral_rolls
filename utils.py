@@ -2,7 +2,6 @@ import io
 import sys
 import threading
 import json
-import tarfile
 import subprocess
 import shutil
 from multiprocessing import Pool, cpu_count
