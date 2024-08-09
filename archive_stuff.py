@@ -15,7 +15,6 @@ for ldir in raw_dir.glob('*/*/*/'):
     all_parts_done = all([ p.exists() and p.stat().st_size <= 4 for p in part_files ])
     if not all_parts_done:
         continue
-
     acno = ldir.parent.name
 
     curr_cinfo = None
@@ -25,6 +24,6 @@ for ldir in raw_dir.glob('*/*/*/'):
             curr_cinfo = cinfo
             break
 
-    print(ldir)
+    print(f'archiving {ldir}')
     create_archive(curr_cinfo, ldir.name)
     upload_archive_to_r2(curr_cinfo, ldir.name)

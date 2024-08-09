@@ -115,12 +115,17 @@ def create_archive(cinfo, lang):
 
     if not archive_file.exists():
         print(f'creating {archive_file}')
-        run_external(f'tar -cvf {archive_file} {l_pages_dir}')
+        cmd = f'tar -cvf {archive_file} {l_pages_dir}'
+        print(f'running - {cmd}')
+        run_external(cmd)
+        print(f'deleting {l_pages_dir}')
         shutil.rmtree(l_pages_dir)
 
 
 def upload_archive_to_r2(cinfo, lang):
- 
+    acno  = cinfo['asmblyNo']
+    scode = cinfo['stateCd'] 
+
     ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
     archive_file = ac_pages_dir / f'{lang}.tar'
 
@@ -131,8 +136,10 @@ def upload_archive_to_r2(cinfo, lang):
     config = TransferConfig(multipart_threshold=1024*25, max_concurrency=10,
                             multipart_chunksize=1024*25, use_threads=True)
 
+    print(f'uploading {archive_file}')
     s3.upload_file(archive_file, 'indian-electoral-rolls', f'{scode}/{acno}/{lang}.tar',
                    Config=config, Callback=ProgressPercentage(archive_file))
 
+    print(f'deleting {archive_file}')
     archive_file.unlink()
 
