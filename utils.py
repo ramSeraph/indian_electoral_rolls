@@ -102,6 +102,26 @@ def get_boto_client():
     return boto_client
 
 
+def create_pdf_archive(cinfo, lang):
+    acno  = cinfo['asmblyNo']
+    scode = cinfo['stateCd']
+
+    ac_pdfs_dir = Path('data/raw/') / f'{scode}' / f'{acno}'
+    l_pdfs_dir  = ac_pdfs_dir / f'{lang}' 
+    if not l_pdfs_dir.exists():
+        return
+
+    archive_file = ac_pdfs_dir / f'{lang}.tar'
+
+    if not archive_file.exists():
+        print(f'creating {archive_file}')
+        cmd = f'tar -cvf {archive_file} {l_pdfs_dir}'
+        print(f'running - {cmd}')
+        run_external(cmd)
+        print(f'deleting {l_pdfs_dir}')
+        shutil.rmtree(l_pdfs_dir)
+
+
 def create_archive(cinfo, lang):
     acno  = cinfo['asmblyNo']
     scode = cinfo['stateCd']
@@ -121,6 +141,27 @@ def create_archive(cinfo, lang):
         print(f'deleting {l_pages_dir}')
         shutil.rmtree(l_pages_dir)
 
+
+def upload_pdf_archive_to_r2(cinfo, lang):
+    acno  = cinfo['asmblyNo']
+    scode = cinfo['stateCd'] 
+
+    ac_pdfs_dir = Path('data/raw/') / f'{scode}' / f'{acno}'
+    archive_file = ac_pdfs_dir / f'{lang}.tar'
+
+    if not archive_file.exists():
+        return
+       
+    s3 = get_boto_client()
+    config = TransferConfig(multipart_threshold=1024*25, max_concurrency=10,
+                            multipart_chunksize=1024*25, use_threads=True)
+
+    print(f'uploading {archive_file}')
+    s3.upload_file(archive_file, 'indian-electoral-rolls-pdfs', f'{scode}/{acno}/{lang}.tar',
+                   Config=config, Callback=ProgressPercentage(archive_file))
+
+    print(f'deleting {archive_file}')
+    archive_file.unlink()
 
 def upload_archive_to_r2(cinfo, lang):
     acno  = cinfo['asmblyNo']
