@@ -27,8 +27,10 @@ def archive_pages():
                 break
     
         print(f'archiving {ldir}')
-        create_archive(curr_cinfo, ldir.name)
-        upload_archive_to_r2(curr_cinfo, ldir.name)
+        scode = curr_cinfo['stateCd']
+        acno  = curr_cinfo['asmblyNo']
+        create_archive(scode, acno, ldir.name)
+        upload_archive_to_r2(scode, acno, ldir.name)
 
 
 def archive_pdfs():
@@ -54,8 +56,10 @@ def archive_pdfs():
                 break
     
         print(f'archiving {ldir}')
-        create_pdf_archive(curr_cinfo, ldir.name)
-        upload_pdf_archive_to_r2(curr_cinfo, ldir.name)
+        scode = curr_cinfo['stateCd']
+        acno  = curr_cinfo['asmblyNo']
+        create_pdf_archive(scode, acno, ldir.name)
+        upload_pdf_archive_to_r2(scode, acno, ldir.name)
 
 
 if __name__ == '__main__':

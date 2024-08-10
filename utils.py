@@ -120,10 +120,7 @@ def get_boto_client():
     return boto_client
 
 
-def create_pdf_archive(cinfo, lang):
-    acno  = cinfo['asmblyNo']
-    scode = cinfo['stateCd']
-
+def create_pdf_archive(scode, acno, lang):
     ac_pdfs_dir = Path('data/raw/') / f'{scode}' / f'{acno}'
     l_pdfs_dir  = ac_pdfs_dir / f'{lang}' 
     if not l_pdfs_dir.exists():
@@ -140,10 +137,7 @@ def create_pdf_archive(cinfo, lang):
         shutil.rmtree(l_pdfs_dir)
 
 
-def create_archive(cinfo, lang):
-    acno  = cinfo['asmblyNo']
-    scode = cinfo['stateCd']
-
+def create_archive(scode, acno, lang):
     ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
     l_pages_dir  = ac_pages_dir / f'{lang}' 
     if not l_pages_dir.exists():
@@ -161,10 +155,7 @@ def create_archive(cinfo, lang):
 
 MULTIPART_CHUNK_SIZE_MB = 100
 
-def upload_pdf_archive_to_r2(cinfo, lang):
-    acno  = cinfo['asmblyNo']
-    scode = cinfo['stateCd'] 
-
+def upload_pdf_archive_to_r2(scode, acno, lang):
     ac_pdfs_dir = Path('data/raw/') / f'{scode}' / f'{acno}'
     archive_file = ac_pdfs_dir / f'{lang}.tar'
 
@@ -182,9 +173,7 @@ def upload_pdf_archive_to_r2(cinfo, lang):
     print(f'deleting {archive_file}')
     archive_file.unlink()
 
-def upload_archive_to_r2(cinfo, lang):
-    acno  = cinfo['asmblyNo']
-    scode = cinfo['stateCd'] 
+def upload_archive_to_r2(scode, acno, lang):
 
     ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
     archive_file = ac_pages_dir / f'{lang}.tar'
