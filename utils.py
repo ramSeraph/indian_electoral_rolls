@@ -38,7 +38,7 @@ def get_alt_dir(file, alt):
     alt_dir = base_dir.joinpath(*([alt] + pieces[rindex+1:] + [file.name[:-4]]))
     return alt_dir
 
-def extract_images_from_pdf(file, pages_dir):
+def extract_images_from_pdf(file, pages_dir, num_procs):
     pages_dir.mkdir(exist_ok=True, parents=True)
     reader = PdfReader(file)
     pno = 1
@@ -59,16 +59,16 @@ def extract_images_from_pdf(file, pages_dir):
         pno += 1
 
     args = zip(page_png_files, page_files)
-    with Pool(cpu_count()) as pool:
+    with Pool(num_procs) as pool:
         results = pool.map(convert_to_webp, args)
 
 
-def convert_to_pages(pdf_file):
+def convert_to_pages(pdf_file, num_procs=cpu_count()):
     sz = pdf_file.stat().st_size
     if sz <= 4:
         return
     pages_dir = get_alt_dir(pdf_file, 'pages')
-    extract_images_from_pdf(pdf_file, pages_dir)
+    extract_images_from_pdf(pdf_file, pages_dir, num_procs)
     pdf_file.write_text('DONE')
 
 
