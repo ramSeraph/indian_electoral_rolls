@@ -15,6 +15,7 @@ def archive_pages():
         parts = json.loads(parts_file.read_text())
         part_files = [ ldir / f'{p["partNumber"]}.pdf' for p in parts ]
         all_parts_done = all([ p.exists() and p.stat().st_size <= 4 for p in part_files ])
+        all_empty      = all([ p.exists() and p.stat().st_size == 0 for p in part_files ])
         if not all_parts_done:
             continue
         acno = ldir.parent.name
@@ -29,7 +30,7 @@ def archive_pages():
         print(f'archiving {ldir}')
         scode = curr_cinfo['stateCd']
         acno  = curr_cinfo['asmblyNo']
-        create_archive(scode, acno, ldir.name)
+        create_archive(scode, acno, ldir.name, force_create=all_empty)
         upload_archive_to_r2(scode, acno, ldir.name)
 
 

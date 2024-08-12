@@ -137,13 +137,17 @@ def create_pdf_archive(scode, acno, lang):
         shutil.rmtree(l_pdfs_dir)
 
 
-def create_archive(scode, acno, lang):
+def create_archive(scode, acno, lang, force_create=False):
     ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
     l_pages_dir  = ac_pages_dir / f'{lang}' 
+    archive_file = ac_pages_dir / f'{lang}.tar'
+
     if not l_pages_dir.exists():
+        if force_create:
+            ac_pages_dir.mkdir(parents=True, exist_ok=True)
+            archive_file.write_text('')
         return
 
-    archive_file = ac_pages_dir / f'{lang}.tar'
 
     if not archive_file.exists():
         print(f'creating {archive_file}')

@@ -16,7 +16,7 @@ from PIL import Image
 
 from captcha.solve import solve_captcha
 
-from utils import convert_to_pages, create_archive_and_upload
+from utils import convert_to_pages, get_bucket_keys
 
 base_url     = 'https://voters.eci.gov.in/download-eroll'
 api_base_url = 'https://gateway-voters.eci.gov.in/api/v1'
@@ -333,7 +333,7 @@ def download():
             parts = get_constituency_parts(session, constituency_info)
             reset_delay()
             for lang in langs:
-                if (str(scode), acno, lang) in done_set:
+                if (str(scode), str(acno), lang) in done_set:
                     continue
                 for part in parts:
                     part_name = part['partName']
@@ -341,7 +341,7 @@ def download():
                     pdf_file = download_part(session, lang, part)
                     send_q.put(str(pdf_file))
                     reset_delay()
-                done_set.add((str(scode), acno, lang))
+                done_set.add((str(scode), str(acno), lang))
                     
 def populate_done_set():
     keys = get_bucket_keys('indian-electoral-rolls')
