@@ -112,7 +112,7 @@ boto_client = None
 def get_boto_client():
     global boto_client
     if boto_client is None:
-        config = json.loads(Path('r2_credentials.json').read_text())
+        config = json.loads(Path('infra/r2_credentials.json').read_text())
         boto_client = boto3.client('s3',
                                    endpoint_url = f'https://{config["accountid"]}.r2.cloudflarestorage.com',
                                    aws_access_key_id = config['access_key_id'],
@@ -229,4 +229,14 @@ def extract_archive(scode, acno, lang):
         run_external(cmd)
         print(f'deleting {archive_file}')
         archive_file.unlink()
+
+def get_bucket_keys(bucket_name):
+    keys = set()
+    s3 = get_boto_client()
+    response = s3.list_objects(Bucket=bucket_name)
+    for item in response['Contents']:
+        key = item['Key']
+        keys.add(key)
+    return keys
+
 

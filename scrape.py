@@ -1,6 +1,8 @@
 import io
 import json
 import time
+import threading
+import queue
 import base64
 from pathlib import Path
 from pprint import pprint
@@ -14,7 +16,7 @@ from PIL import Image
 
 from captcha.solve import solve_captcha
 
-#from utils import convert_to_pages
+from utils import convert_to_pages, create_archive_and_upload
 
 base_url     = 'https://voters.eci.gov.in/download-eroll'
 api_base_url = 'https://gateway-voters.eci.gov.in/api/v1'
@@ -32,12 +34,15 @@ data_dir = Path('data')
 raw_dir = data_dir / 'raw'
 captcha_dir = Path('captcha/data')
 
+done_set = set()
 
 max_attempts = 5
 initial_delay = 100
 
 try_count = 1
 curr_delay = initial_delay
+
+send_q = queue.Queue()
 
 class RetriableException(Exception):
     pass
@@ -321,19 +326,41 @@ def download():
         reset_delay()
         for constituency_info in constituency_list:
             acname = constituency_info['asmblyName']
+            acno   = constituency_info['asmblyNo']
             print(f'\thandling constituency: {acname}')
             langs = get_constituency_langs(session, constituency_info)
             reset_delay()
             parts = get_constituency_parts(session, constituency_info)
             reset_delay()
             for lang in langs:
+                if (str(scode), acno, lang) in done_set:
+                    continue
                 for part in parts:
                     part_name = part['partName']
                     print(f'\t\thandling lang: {lang}, part: {part_name}')
                     pdf_file = download_part(session, lang, part)
-                    #convert_to_pages(pdf_file)
+                    send_q.put(str(pdf_file))
                     reset_delay()
+                done_set.add((str(scode), acno, lang))
                     
+def populate_done_set():
+    keys = get_bucket_keys('indian-electoral-rolls')
+    for key in keys:
+        parts = key.split('/')
+        scode = parts[0]
+        acno  = parts[1]
+        lang  = parts[2][:-4]
+        done_set.add((scode, acno, lang))
+
+def converter_runner():
+    while True:
+        fname = send_q.get()
+        if fname == 'DONE':
+            send_q.task_done()
+            break
+        pdf_file = Path(fname)
+        convert_to_pages(pdf_file)
+        send_q.task_done()
 
 def reset_delay():
     global try_count
@@ -344,7 +371,9 @@ def reset_delay():
 
 if __name__ == '__main__':
     raw_dir.mkdir(exist_ok=True, parents=True)
+    populate_done_set()
 
+    threading.Thread(target=converter_runner, daemon=True).start()
     while True:
         try:
             download()
@@ -358,5 +387,6 @@ if __name__ == '__main__':
             try_count += 1
             curr_delay *= 2
             continue
+    send_q.join()
 
 
