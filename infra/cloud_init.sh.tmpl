@@ -1,4 +1,5 @@
 #!/bin/bash
+sudo -i -u ubuntu /bin/bash << EOF
 
 git clone https://github.com/ramSeraph/indian_electoral_rolls.git
 cd indian_electoral_rolls/
@@ -19,4 +20,8 @@ cd -
 
 echo "<PB_TOKEN>" | pb set-key
 
-echo "<R2_CREDENTIALS_BASE64>" | base64 --decode > r2_credentials.json
+echo "<R2_CREDENTIALS_BASE64>" | base64 --decode > infra/r2_credentials.json
+
+nohup ./run_temp.sh &
+
+EOF

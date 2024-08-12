@@ -16,7 +16,7 @@ def get_details(key):
     return scode, acno, lang
 
 
-q = queue.Queue(maxsize=5)
+q = queue.Queue(maxsize=3)
 
 def run_conversion():
     while True:
@@ -41,6 +41,7 @@ s3 = get_boto_client()
 
 bucket_name_from = 'indian-electoral-rolls-pdfs'
 
+threading.Thread(target=run_conversion, daemon=True).start()
 threading.Thread(target=run_conversion, daemon=True).start()
 
 response = s3.list_objects(Bucket=bucket_name_from)
