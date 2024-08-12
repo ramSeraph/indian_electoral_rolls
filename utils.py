@@ -199,6 +199,7 @@ def download_pdf_archive_from_r2(scode, acno, lang):
     if archive_file.exists():
         return
 
+    ac_pdfs_dir.mkdir(parents=True, exist_ok=True)
     bucket_name = 'indian-electoral-rolls-pdfs'
     key = f'{scode}/{acno}/{lang}.tar'
 
