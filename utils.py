@@ -25,7 +25,11 @@ def run_external(cmd):
 def convert_to_webp(arg):
     png_file, webp_file = arg
     cmd = f'cwebp -q 100 -z 9 -lossless {png_file} -o {webp_file}'
-    run_external(cmd)
+    try:
+        run_external(cmd)
+    except Exception as ex:
+        print(ex)
+        raise ex
     png_file.unlink()
 
 def get_alt_dir(file, alt):
@@ -59,8 +63,12 @@ def extract_images_from_pdf(file, pages_dir, num_procs):
         pno += 1
 
     args = zip(page_png_files, page_files)
-    with Pool(num_procs) as pool:
-        results = pool.map(convert_to_webp, args)
+    if num_procs == -1:
+        for arg in args:
+            convert_to_webp(arg)
+    else:
+        with Pool(num_procs) as pool:
+            results = pool.map(convert_to_webp, args)
 
 
 def convert_to_pages(pdf_file, num_procs=cpu_count()):

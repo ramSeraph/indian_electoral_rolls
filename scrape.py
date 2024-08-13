@@ -366,6 +366,7 @@ def converter_runner():
             send_q.task_done()
             break
         pdf_file = Path(fname)
+        print(f'\t\tconverting file {pdf_file}')
         convert_to_pages(pdf_file)
         send_q.task_done()
 
@@ -380,11 +381,11 @@ if __name__ == '__main__':
     raw_dir.mkdir(exist_ok=True, parents=True)
     populate_done_set()
 
-    threading.Thread(target=converter_runner, daemon=True).start()
+    converter_thread = threading.Thread(target=converter_runner, daemon=True)
+    converter_thread.start()
     while True:
         try:
             download()
-            exit(0)
         except DelayedRetriableException as ex:
             print(f'WARNING: {ex}..')
             if try_count > max_attempts:
@@ -394,6 +395,8 @@ if __name__ == '__main__':
             try_count += 1
             curr_delay *= 2
             continue
+    send_q.put('DONE')
+    converter_thread.join()
     send_q.join()
 
 
