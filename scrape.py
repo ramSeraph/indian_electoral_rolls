@@ -335,12 +335,19 @@ def download():
             for lang in langs:
                 if (str(scode), str(acno), lang) in done_set:
                     continue
+                pdf_files = []
                 for part in parts:
                     part_name = part['partName']
                     print(f'\t\thandling lang: {lang}, part: {part_name}')
                     pdf_file = download_part(session, lang, part)
+                    pdf_files.append(pdf_file)
                     send_q.put(str(pdf_file))
                     reset_delay()
+                # to make archive management uniform.. just leave an empty dir when all files are empty
+                all_empty = all([ p.exists() and p.stat().st_size == 0 for p in pdf_files ])
+                if all_empty:
+                    lang_dir = Path('data/pages/') / f'{scode}' / f'{acno}' / f'{lang}'
+                    lang_dir.mkdir(exist_ok=True, parents=True)
                 done_set.add((str(scode), str(acno), lang))
                     
 def populate_done_set():

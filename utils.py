@@ -137,15 +137,13 @@ def create_pdf_archive(scode, acno, lang):
         shutil.rmtree(l_pdfs_dir)
 
 
-def create_archive(scode, acno, lang, force_create=False):
+
+def create_archive(scode, acno, lang):
     ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
     l_pages_dir  = ac_pages_dir / f'{lang}' 
     archive_file = ac_pages_dir / f'{lang}.tar'
 
     if not l_pages_dir.exists():
-        if force_create:
-            ac_pages_dir.mkdir(parents=True, exist_ok=True)
-            archive_file.write_text('')
         return
 
 
@@ -190,7 +188,9 @@ def upload_archive_to_r2(scode, acno, lang):
                             multipart_chunksize=1024*MULTIPART_CHUNK_SIZE_MB, use_threads=True)
 
     print(f'uploading {archive_file}')
-    s3.upload_file(archive_file, 'indian-electoral-rolls', f'{scode}/{acno}/{lang}.tar',
+    bucket_name = 'indian-electoral-rolls'
+    key = f'{scode}/{acno}/{lang}.tar'
+    s3.upload_file(archive_file, bucket_name, key,
                    Config=config, Callback=ProgressPercentage(archive_file))
 
     print(f'deleting {archive_file}')
