@@ -36,6 +36,8 @@ captcha_dir = Path('captcha/data')
 
 done_set = set()
 
+selected_state_codes = set()
+
 max_attempts = 5
 initial_delay = 100
 
@@ -293,6 +295,9 @@ def get_priority_map():
     return priority_map
 
 def download():
+    global done_set
+    global selected_state_codes
+
     session = requests.session()
     retry = Retry(
         total=max_attempts,
@@ -313,10 +318,13 @@ def download():
     reset_delay()
 
     priority_map = get_priority_map()
+    state_list = [ x for x in state_list if x['stateCd'] in priority_map ]
     state_list.sort(key=lambda x: priority_map[x['stateCd']])
 
     for state_info in state_list:
         scode = state_info['stateCd']
+        if len(selected_state_codes) > 0 and scode not in selected_state_codes:
+            continue
         sname = state_info['stateName']
         print(f'handling state: {sname}')
   
@@ -378,6 +386,8 @@ def reset_delay():
 
 
 if __name__ == '__main__':
+    import sys
+    selected_state_codes = set(sys.argv[1:])
     raw_dir.mkdir(exist_ok=True, parents=True)
     populate_done_set()
 
