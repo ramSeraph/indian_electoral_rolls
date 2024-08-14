@@ -36,6 +36,6 @@ echo "<PB_TOKEN>" | pb set-key
 echo "<R2_CREDENTIALS_BASE64>" | base64 --decode > infra/r2_credentials.json
 
 nohup ./run.sh <SELECTED_STATE_CODES> &
-nohup ./run_archiver.sh &
+nohup ./run_archiver.sh <SELECTED_STATE_CODES> &
 
 EOF
