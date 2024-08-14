@@ -234,8 +234,8 @@ def download_part(session, lang, part):
 
     acno   = part['acNumber']
     partno = part['partNumber']
-    scode  = part['stateCd']
-    dcode  = part['districtCd']
+    scode  = part['stateCd'].upper()
+    dcode  = part['districtCd'].upper()
 
     pdf_file = raw_dir / f'{scode}' / f'{acno}' / f'{lang}' / f'{partno}.pdf'
     if pdf_file.exists():
