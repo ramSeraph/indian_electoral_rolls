@@ -71,7 +71,7 @@ def extract_images_from_pdf(file, pages_dir, num_procs):
             results = pool.map(convert_to_webp, args)
 
 
-def convert_to_pages(pdf_file, num_procs=cpu_count()):
+def convert_to_pages(pdf_file, num_procs=cpu_count()*2):
     sz = pdf_file.stat().st_size
     if sz <= 4:
         return
