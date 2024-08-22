@@ -317,9 +317,10 @@ def download():
     state_list = get_state_list(session)
     reset_delay()
 
-    priority_map = get_priority_map()
-    state_list = [ x for x in state_list if x['stateCd'] in priority_map ]
-    state_list.sort(key=lambda x: priority_map[x['stateCd']])
+    if len(selected_state_codes) == 0:
+        priority_map = get_priority_map()
+        state_list = [ x for x in state_list if x['stateCd'] in priority_map ]
+        state_list.sort(key=lambda x: priority_map[x['stateCd']])
 
     for state_info in state_list:
         scode = state_info['stateCd']
