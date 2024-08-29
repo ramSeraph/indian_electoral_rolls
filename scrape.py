@@ -25,7 +25,10 @@ captcha_url    = api_base_url + '/captcha-service/generateCaptcha/EROLL'
 state_list_url = api_base_url + '/common/states/'
 lang_url       = api_base_url + '/printing-publish/get-ac-languages'
 part_list_url  = api_base_url + '/printing-publish/get-part-list'
-roll_url       = api_base_url + '/printing-publish/generate-published-geroll'
+ge_url         = api_base_url + '/printing-publish/generate-published-geroll'
+final_url      = api_base_url + '/printing-publish/generate-published-supplement'
+draft_url      = api_base_url + '/printing-publish/generate-published-eroll'
+
 const_list_url_tpl = api_base_url + '/common/constituencies?stateCode={}'
 district_url_tpl   = api_base_url + '/common/districts/{}'
 
@@ -50,6 +53,9 @@ class RetriableException(Exception):
     pass
 
 class DelayedRetriableException(Exception):
+    pass
+
+class ChangeUrlRetriableException(Exception):
     pass
 
 def raise_delayed_exception_if_needed(resp, status_codes=[500]):
@@ -206,7 +212,7 @@ def get_captcha(session):
     img = Image.open(io.BytesIO(img_bytes))
     return data['id'], img
 
-def make_download_call(session, postdata):
+def make_download_call(roll_url, session, postdata):
     try:
         resp = session.post(roll_url, json=postdata)
     except RequestException as ex:
@@ -218,6 +224,11 @@ def make_download_call(session, postdata):
             msg = data['message']
             if msg == 'Invalid Catpcha':
                 raise RetriableException('Failed to solve captcha')
+        if resp.status_code == 401:
+            data = resp.json()
+            msg = data['message']
+            if msg.find('has not been published for this AC') != -1:
+                raise ChangeUrlRetriableException(f'Roll not available for {roll_url}')
         raise_delayed_exception_if_needed(resp)
         print('\t\t\tWARNING: Failed request - ', resp.text)
         raise Exception(f'Unable to get roll for part {postdata} at {roll_url}')
@@ -237,12 +248,23 @@ def download_part(session, lang, part):
     scode  = part['stateCd'].upper()
     dcode  = part['districtCd'].upper()
 
-    pdf_file = raw_dir / f'{scode}' / f'{acno}' / f'{lang}' / f'{partno}.pdf'
-    if pdf_file.exists():
-        return pdf_file
+    lang_dir = raw_dir / f'{scode}' / f'{acno}' / f'{lang}'
 
-    pdf_file.parent.mkdir(exist_ok=True, parents=True)
+    ge_pdf_file    = lang_dir / f'{partno}.pdf'
+    draft_pdf_file = lang_dir / f'd{partno}.pdf'
+    final_pdf_file = lang_dir / f'f{partno}.pdf'
 
+
+    roll_urls = [ draft_url, final_url, ge_url ]
+    pdf_files = [ draft_pdf_file, final_pdf_file, ge_pdf_file ]
+    for pdf_file in pdf_files:
+        if pdf_file.exists():
+            return pdf_file
+
+    lang_dir.mkdir(exist_ok=True, parents=True)
+
+    pdf_file = pdf_files.pop()
+    roll_url = roll_urls.pop()
     while True:
         try:
             captcha_id, captcha_img = get_captcha(session)
@@ -260,9 +282,16 @@ def download_part(session, lang, part):
                 'stateCd'    : scode,
             }
 
-            data = make_download_call(session, postdata)
+            data = make_download_call(roll_url, session, postdata)
         except RetriableException as ex:
             print(f'\t\t\tWARNING: {ex}')
+            continue
+        except ChangeUrlRetriableException as ex:
+            print(f'\t\t\tWARNING: {ex}')
+            if len(pdf_files) == 0: 
+                raise Exception('Unable to get any roll')
+            pdf_file = pdf_files.pop()
+            roll_url = roll_urls.pop()
             continue
 
         if data['file'] is None:
@@ -392,6 +421,7 @@ if __name__ == '__main__':
     import sys
     selected_state_codes = sys.argv[1:]
     raw_dir.mkdir(exist_ok=True, parents=True)
+    print('collecting existing constituency list')
     populate_done_set()
 
     converter_thread = threading.Thread(target=converter_runner, daemon=True)
