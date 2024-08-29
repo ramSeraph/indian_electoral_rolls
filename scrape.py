@@ -227,7 +227,8 @@ def make_download_call(roll_url, session, postdata):
         if resp.status_code == 401:
             data = resp.json()
             msg = data['message']
-            if msg.find('has not been published for this AC') != -1:
+            if msg.find('has not been published for this AC') != -1 or \
+               msg.find('not published for this state') != -1:
                 raise ChangeUrlRetriableException(f'Roll not available for {roll_url}')
         raise_delayed_exception_if_needed(resp)
         print('\t\t\tWARNING: Failed request - ', resp.text)
