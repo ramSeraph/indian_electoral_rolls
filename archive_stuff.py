@@ -13,8 +13,17 @@ def archive_pages():
         
         parts_file = ldir.parent / 'parts.json'
         parts = json.loads(parts_file.read_text())
-        part_files = [ ldir / f'{p["partNumber"]}.pdf' for p in parts ]
-        all_parts_done = all([ p.exists() and p.stat().st_size <= 4 for p in part_files ])
+        part_files = []
+        for part_info in parts:
+            pno = part_info['partNumber']
+            pfiles = [ ldir / f'{pno}.pdf', ldir / f'f{pno}.pdf', ldir / f'd{pno}.pdf' ]
+            pfile_selected = None
+            for pfile in pfiles:
+                if pfile.exists():
+                    pfile_selected = pfile
+                    break
+            part_files.append(pfile_selected)
+        all_parts_done = all([ p is not None and p.stat().st_size <= 4 for p in part_files ])
         if not all_parts_done:
             continue
         acno = ldir.parent.name
@@ -41,8 +50,18 @@ def archive_pdfs():
         
         parts_file = ldir.parent / 'parts.json'
         parts = json.loads(parts_file.read_text())
-        part_files = [ ldir / f'{p["partNumber"]}.pdf' for p in parts ]
-        all_parts_done = all([ p.exists() and (p.stat().st_size > 4 or p.stat().st_size == 0) for p in part_files ])
+        part_files = []
+        for part_info in parts:
+            pno = part_info['partNumber']
+            pfiles = [ ldir / f'{pno}.pdf', ldir / f'f{pno}.pdf', ldir / f'd{pno}.pdf' ]
+            pfile_selected = None
+            for pfile in pfiles:
+                if pfile.exists():
+                    pfile_selected = pfile
+                    break
+            part_files.append(pfile_selected)
+
+        all_parts_done = all([ p is not None and (p.stat().st_size > 4 or p.stat().st_size == 0) for p in part_files ])
         if not all_parts_done:
             continue
 
