@@ -246,10 +246,13 @@ def extract_archive(scode, acno, lang):
 def get_bucket_keys(bucket_name):
     keys = set()
     s3 = get_boto_client()
-    response = s3.list_objects(Bucket=bucket_name)
-    for item in response['Contents']:
-        key = item['Key']
-        keys.add(key)
+    paginator = s3.get_paginator('list_objects_v2')
+    pages = paginator.paginate(Bucket=bucket_name)
+
+    for page in pages:
+        for item in page['Contents']:
+            key = item['Key']
+            keys.add(key)
     return keys
 
 
