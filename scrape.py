@@ -391,6 +391,7 @@ def download():
                     lang_dir.mkdir(exist_ok=True, parents=True)
                 done_set.add((str(scode), str(acno), lang))
                     
+
 def populate_done_set():
     keys = get_bucket_keys('indian-electoral-rolls')
     for key in keys:
@@ -430,6 +431,7 @@ if __name__ == '__main__':
     while True:
         try:
             download()
+            break
         except DelayedRetriableException as ex:
             print(f'WARNING: {ex}..')
             if try_count > max_attempts:
