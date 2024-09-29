@@ -225,6 +225,27 @@ def download_pdf_archive_from_r2(scode, acno, lang):
     s3.download_file(bucket_name, key, archive_file,
                      Config=config, Callback=ProgressDownloadPercentage(archive_size))
 
+def download_archive_from_r2(scode, acno, lang):
+    ac_pages_dir = Path('data/pages/') / f'{scode}' / f'{acno}'
+    archive_file = ac_pages_dir / f'{lang}.tar'
+
+    if archive_file.exists():
+        return
+
+    ac_pages_dir.mkdir(parents=True, exist_ok=True)
+    bucket_name = 'indian-electoral-rolls'
+    key = f'{scode}/{acno}/{lang}.tar'
+
+    s3 = get_boto_client()
+    config = TransferConfig(multipart_threshold=1024*MULTIPART_CHUNK_SIZE_MB, max_concurrency=10,
+                            multipart_chunksize=1024*MULTIPART_CHUNK_SIZE_MB, use_threads=True)
+    print(f'downloading {archive_file}')
+    response = s3.head_object(Bucket=bucket_name, Key=key)
+    archive_size = response['ContentLength']
+
+    s3.download_file(bucket_name, key, archive_file,
+                     Config=config, Callback=ProgressDownloadPercentage(archive_size))
+
 
 
 def extract_archive(scode, acno, lang):
@@ -243,16 +264,19 @@ def extract_archive(scode, acno, lang):
         print(f'deleting {archive_file}')
         archive_file.unlink()
 
-def get_bucket_keys(bucket_name):
-    keys = set()
+def get_bucket_keys(bucket_name, with_sizes=False):
+    keys = {}
     s3 = get_boto_client()
     paginator = s3.get_paginator('list_objects_v2')
     pages = paginator.paginate(Bucket=bucket_name)
 
     for page in pages:
         for item in page['Contents']:
-            key = item['Key']
-            keys.add(key)
-    return keys
+            key  = item['Key']
+            size = item['Size']
+            keys[key] = size
+    if with_sizes:
+        return keys
+    return set(keys.keys())
 
 
